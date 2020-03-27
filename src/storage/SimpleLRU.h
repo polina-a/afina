@@ -17,11 +17,14 @@ namespace Backend {
  */
 class SimpleLRU : public Afina::Storage {
 public:
-    SimpleLRU(size_t max_size = 1024) : _max_size(max_size) {}
+    SimpleLRU(size_t max_size = 1024) : _max_size(max_size), _cur_size(0), _tail(nullptr) {}
 
     ~SimpleLRU() {
         _lru_index.clear();
-        _lru_head.reset(); // TODO: Here is stack overflow
+        while(_tail != _head.get() &&  _tail ) {
+          _tail = _tail->prev;
+          _tail->next.reset();
+          }
     }
 
     // Implements Afina::Storage interface
@@ -42,24 +45,29 @@ public:
 private:
     // LRU cache node
     using lru_node = struct lru_node {
-        std::string key;
+        const std::string key;
         std::string value;
-        std::unique_ptr<lru_node> prev;
+        lru_node* prev;
         std::unique_ptr<lru_node> next;
     };
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
+    std::size_t _cur_size;
     std::size_t _max_size;
 
     // Main storage of lru_nodes, elements in this list ordered descending by "freshness": in the head
     // element that wasn't used for longest time.
     //
     // List owns all nodes
-    std::unique_ptr<lru_node> _lru_head;
+    std::unique_ptr<lru_node> _head;
+    lru_node* _tail;
 
     // Index of nodes from list above, allows fast random access to elements by lru_node#key
-    std::map<std::reference_wrapper<std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+    std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+    void del_last_node();
+    void insert_new_node(lru_node* node);
+    void move_node_to_head(lru_node* node);
 };
 
 } // namespace Backend
