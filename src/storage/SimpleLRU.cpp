@@ -5,7 +5,11 @@ namespace Backend {
 
 
 void SimpleLRU::del_last_node(){
+
+
       lru_node* tail_node = _tail;
+      if (tail_node == nullptr) {return;}
+      
       std::size_t node_size = tail_node->key.size() + tail_node->value.size();
       _cur_size -= node_size;
 
@@ -50,15 +54,16 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
       if(node_size > _max_size) {return false;}
 
       auto node = _lru_index.find(key);
-      if(node != _lru_index.end()) {
-        std::size_t delta = value.size() - (node->second).get().value.size();
+      if(node == _lru_index.end()) {
+        std::size_t delta = value.size() > (node->second).get().value.size()? value.size() - (node->second).get().value.size():0;
         move_node_to_head(&node->second.get());
         while(_cur_size + delta > _max_size) {del_last_node();}
         node->second.get().value = value;
         _cur_size += delta;
         }
       else {
-          std::size_t delta = value.size() - (node->second).get().value.size();
+
+          std::size_t delta = value.size() > (node->second).get().value.size()? value.size() - (node->second).get().value.size():0;
           while(_cur_size + delta > _max_size) {del_last_node();}
           lru_node* new_node = new lru_node{key, value, nullptr, nullptr};
           insert_new_node(new_node);
@@ -76,7 +81,7 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
       auto node = _lru_index.find(key);
       if(node != _lru_index.end()) {return false;}
       else {
-          std::size_t delta = value.size() - (node->second).get().value.size();
+          std::size_t delta = value.size() > (node->second).get().value.size()? value.size() - (node->second).get().value.size():0;
           while(_cur_size + delta > _max_size) {del_last_node();}
           lru_node* new_node = new lru_node{key, value, nullptr, nullptr};
           insert_new_node(new_node);
@@ -93,7 +98,7 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
       auto node = _lru_index.find(key);
       if(node == _lru_index.end()) {return false;}
 
-      std::size_t delta = value.size() - (node->second).get().value.size();
+      std::size_t delta = value.size() > (node->second).get().value.size()? value.size() - (node->second).get().value.size():0;
       move_node_to_head(&node->second.get());
       while(_cur_size + delta > _max_size) {del_last_node();}
       node->second.get().value = value;
