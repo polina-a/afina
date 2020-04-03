@@ -188,7 +188,7 @@ void ServerImpl::Work(int client_socket) {
         _cur_workers--;
         if(_cur_workers == 0){cond_var.notify_all();}
 
-}}
+}
 // See Server.h
 void ServerImpl::OnRun() {
     // Here is connection state
@@ -249,8 +249,8 @@ void ServerImpl::OnRun() {
 
     // Cleanup on exit...
     _logger->warn("Network stopped");
+  }
 }
-
 } // namespace MTblocking
 } // namespace Network
 } // namespace Afina
