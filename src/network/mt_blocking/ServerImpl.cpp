@@ -39,7 +39,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
     _logger->info("Start mt_blocking network service");
 
     _max_workers = n_workers;
-
+    _cur_workers = 0;
     sigset_t sig_mask;
     sigemptyset(&sig_mask);
     sigaddset(&sig_mask, SIGPIPE);
@@ -82,6 +82,11 @@ void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
 void ServerImpl::Stop() {
     running.store(false);
     shutdown(_server_socket, SHUT_RDWR);
+    std::unique_lock<std::mutex> _lock(_m);
+    for (auto socket_id: clients){
+      clients.erase(socket_id);
+      shutdown(socket_id, SHUT_RD);
+    }
 }
 
 // See Server.h
@@ -89,8 +94,8 @@ void ServerImpl::Join() {
     assert(_thread.joinable());
     _thread.join();
     close(_server_socket);
-    std::unique_lock<std::mutex> lock(_m);
-    while(_cur_workers != 0) {cond_var.wait(lock);}
+    std::unique_lock<std::mutex> _lock(_m);
+    while(_cur_workers != 0) {cond_var.wait(_lock);}
 }
 
 void ServerImpl::Work(int client_socket) {
@@ -100,7 +105,7 @@ void ServerImpl::Work(int client_socket) {
     // - command_to_execute: last command parsed out of stream
     // - arg_remains: how many bytes to read from stream to get command argument
     // - argument_for_command: buffer stores argument
-    std::size_t arg_remains;
+    std::size_t arg_remains = 0;
     Protocol::Parser parser;
     std::string argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
@@ -184,22 +189,16 @@ void ServerImpl::Work(int client_socket) {
         // We are done with this connection
         close(client_socket);
 
-        std::lock_guard<std::mutex> lock(_m);
+        std::unique_lock<std::mutex> _lock(_m);
         _cur_workers--;
-        if(_cur_workers == 0){cond_var.notify_all();}
+        clients.erase(client_socket);
+        _lock.unlock();
+        if(_cur_workers == 0 && !running.load()){cond_var.notify_all();}
 
 }
 // See Server.h
 void ServerImpl::OnRun() {
-    // Here is connection state
-    // - parser: parse state of the stream
-    // - command_to_execute: last command parsed out of stream
-    // - arg_remains: how many bytes to read from stream to get command argument
-    // - argument_for_command: buffer stores argument
-    std::size_t arg_remains;
-    Protocol::Parser parser;
-    std::string argument_for_command;
-    std::unique_ptr<Execute::Command> command_to_execute;
+
     while (running.load()) {
         _logger->debug("waiting for connection...");
 
@@ -234,11 +233,13 @@ void ServerImpl::OnRun() {
 
         // TODO: Start new thread and process data from/to connection
         {
-          std::lock_guard<std::mutex> lock(_m);
+          std::unique_lock<std::mutex> _lock(_m);
           if(_cur_workers < _max_workers) {
+                clients.insert(client_socket);
+                _cur_workers++;
+                _lock.unlock();
                 std::thread thrd(&ServerImpl::Work, this, client_socket);
                 thrd.detach();
-                _cur_workers++;
             }
           else {
             std::string msg = "No workers available";

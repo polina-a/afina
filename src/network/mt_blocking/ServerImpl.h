@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <set>
 
 #include <afina/network/Server.h>
 
@@ -57,7 +58,8 @@ private:
     std::thread _thread;
 
     std::size_t _max_workers;
-    std::size_t _cur_workers = 0;
+    std::atomic<int> _cur_workers;
+    std::set<int> clients;
     std::mutex _m;
     std::condition_variable cond_var;
 };
