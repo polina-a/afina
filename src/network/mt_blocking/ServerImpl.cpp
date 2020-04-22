@@ -84,7 +84,6 @@ void ServerImpl::Stop() {
     shutdown(_server_socket, SHUT_RDWR);
     std::unique_lock<std::mutex> _lock(_m);
     for (auto socket_id: clients){
-      clients.erase(socket_id);
       shutdown(socket_id, SHUT_RD);
     }
 }
@@ -233,8 +232,9 @@ void ServerImpl::OnRun() {
 
         // TODO: Start new thread and process data from/to connection
         {
-          std::unique_lock<std::mutex> _lock(_m);
+
           if(_cur_workers < _max_workers) {
+                std::unique_lock<std::mutex> _lock(_m);
                 clients.insert(client_socket);
                 _cur_workers++;
                 _lock.unlock();
