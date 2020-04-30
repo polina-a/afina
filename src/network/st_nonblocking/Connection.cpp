@@ -4,7 +4,7 @@
 #include <sys/uio.h>
 
 #include <iostream>
-
+#include <cassert>
 namespace Afina {
 namespace Network {
 namespace STnonblock {
@@ -14,7 +14,7 @@ void Connection::Start() {
    std::cout << "Start" << std::endl;
    _event.data.fd = _socket;
    _event.data.ptr = this;
-   _event.events = EPOLLIN;
+   _event.events = EPOLLIN|EPOLLERR|EPOLLRDHUP;
 
  }
 
@@ -22,7 +22,6 @@ void Connection::Start() {
 void Connection::OnError() {
    std::cout << "OnError" << std::endl;
    is_alive = false;
-   _event.events = EPOLLERR;
  }
 
 
@@ -30,7 +29,7 @@ void Connection::OnError() {
 void Connection::OnClose() {
    std::cout << "OnClose" << std::endl;
    is_alive = false;
-   _event.events = EPOLLHUP;}
+}
 
 // See Connection.h
 void Connection::DoRead() {
@@ -95,13 +94,12 @@ void Connection::DoRead() {
                          parser.Reset();
                      }
                  } // while (read_bytes)
-                 if (read_bytes < 0) { OnError(); return; }
-          }
+                 assert (read_bytes >= 0);        }
         }catch (std::runtime_error &ex) {
               outputs.push_back("ERROR\r\n");
               _event.events |= EPOLLOUT;
           }
-          if (!(_event.events & EPOLLOUT) && !(_event.events & EPOLLIN)) {OnClose();}
+
 }
 
 // See Connection.h
@@ -115,10 +113,12 @@ void Connection::DoWrite() {
        iov[i].iov_len = outputs[i].size();
    }
    written_bytes = writev(_socket, iov, outputs.size());
-   if (written_bytes <= 0) {
+   if (written_bytes <= 0 ) {
+     if (errno!= EAGAIN & errno!= EINTR){
        OnError();
        return;
-   }
+     }
+ }
    auto last = outputs.begin();
    while (written_bytes > 0) {
        if (written_bytes >= last->size()) {
@@ -132,9 +132,6 @@ void Connection::DoWrite() {
    outputs.erase(outputs.begin(), last);
    if (!outputs.size()) {
        _event.events &= !EPOLLOUT;
-   }
-   if (!(_event.events & EPOLLOUT) && !(_event.events & EPOLLIN)) {
-       OnClose();
    }
   }
 
