@@ -75,8 +75,8 @@ void Worker::OnRun() {
     // Do not forget to use EPOLLEXCLUSIVE flag when register socket
     // for events to avoid thundering herd type behavior.
     int timeout = -1;
-    std::array<struct epoll_event, 64> mod_list;
     while (isRunning) {
+    std::array<struct epoll_event, 64> mod_list;
         int nmod = epoll_wait(_epoll_fd, &mod_list[0], mod_list.size(), timeout);
         _logger->debug("Worker wokeup: {} events", nmod);
 
@@ -117,6 +117,7 @@ void Worker::OnRun() {
                 if ((epoll_ctl_retval = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, pconn->_socket, &pconn->_event))) {
                     _logger->debug("epoll_ctl failed during connection rearm: error {}", epoll_ctl_retval);
                     pconn->OnError();
+                    close(pconn->_socket);
                     delete pconn;
                 }
             }
@@ -125,6 +126,7 @@ void Worker::OnRun() {
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, pconn->_socket, &pconn->_event)) {
                     std::cerr << "Failed to delete connection!" << std::endl;
                 }
+                 close(pconn->_socket);
                 delete pconn;
             }
         }
