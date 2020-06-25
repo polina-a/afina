@@ -14,7 +14,6 @@ namespace MTnonblock {
 void Connection::Start() {
 
    std::cout << "Start" << std::endl;
-   std::unique_lock <std::mutex> lock(_mutex);
    _event.data.fd = _socket;
    _event.data.ptr = this;
    _event.events = EPOLLIN|EPOLLERR|EPOLLRDHUP|EPOLLET;

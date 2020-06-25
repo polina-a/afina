@@ -42,7 +42,6 @@ private:
     int _socket;
     struct epoll_event _event;
     std::atomic<bool> is_alive;
-    std::mutex _mutex;
 
 
     std::vector<std::string> outputs;

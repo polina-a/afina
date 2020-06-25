@@ -67,6 +67,7 @@ private:
     std::vector<Worker> _workers;
 
     std::set<Connection*> connections;
+    std::mutex m;
 };
 
 } // namespace MTnonblock
