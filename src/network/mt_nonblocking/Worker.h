@@ -5,6 +5,8 @@
 #include <memory>
 #include <thread>
 
+#include "Connection.h"
+#include "ServerImpl.h"
 namespace spdlog {
 class logger;
 }

@@ -34,7 +34,7 @@ void Connection::OnClose() {
 // See Connection.h
 void Connection::DoRead() {
   std::cout << "DoRead" << std::endl;
-  std::unique_lock <std::mutex> lock(_mutex);
+
   try {
             int just_read = -1;
             while ((just_read = read(_socket, client_buffer, sizeof(client_buffer))) > 0) {
@@ -104,7 +104,6 @@ void Connection::DoRead() {
 // See Connection.h
 void Connection::DoWrite() {
    std::cout << "DoWrite" << std::endl;
-   std::unique_lock <std::mutex> lock(_mutex);
    struct iovec iov[outputs.size()];
 
   for (size_t i = 0; i != outputs.size(); ++i) {

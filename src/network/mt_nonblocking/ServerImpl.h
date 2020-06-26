@@ -4,9 +4,11 @@
 #include <thread>
 #include <vector>
 #include <set>
+#include <mutex>
 
 #include <afina/network/Server.h>
 #include "Connection.h"
+
 
 namespace spdlog {
 class logger;

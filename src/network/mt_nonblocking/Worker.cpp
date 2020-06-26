@@ -12,9 +12,11 @@
 #include <spdlog/logger.h>
 
 #include <afina/logging/Service.h>
-
 #include "Connection.h"
 #include "Utils.h"
+#include "ServerImpl.h"
+
+
 
 namespace Afina {
 namespace Network {
@@ -118,8 +120,8 @@ void Worker::OnRun() {
                     _logger->debug("epoll_ctl failed during connection rearm: error {}", epoll_ctl_retval);
                     pconn->OnError();
                     close(pconn->_socket);
-                    std::unique_lock<std::mutex> lock(m);
-                    connections.erase(pc->_socket);
+                    std::unique_lock<std::mutex> _lock(m);
+                    connections.erase(pconn);
                     delete pconn;
                 }
             }
@@ -129,8 +131,8 @@ void Worker::OnRun() {
                     std::cerr << "Failed to delete connection!" << std::endl;
                 }
                  close(pconn->_socket);
-                 std::unique_lock<std::mutex> lock(m);
-                 connections.erase(pc->_socket);
+                 std::unique_lock<std::mutex> _lock(m);
+                 connections.erase(pconn);
                  delete pconn;
             }
         }
