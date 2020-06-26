@@ -180,11 +180,15 @@ void ServerImpl::OnRun() {
                     close(pc->_socket);
                     pc->OnClose();
                     connections.erase(pc);
-                    delete pc;
+
                 }
             }
         }
     }
+    for (auto conn:connections){
+      close(conn->_socket);
+    }
+    connections.clear();
     _logger->warn("Acceptor stopped");
 }
 
@@ -224,6 +228,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
         if (pc->isAlive()) {
             if (epoll_ctl(epoll_descr, EPOLL_CTL_ADD, pc->_socket, &pc->_event)) {
                 pc->OnError();
+                connections.erase(pc);
                 delete pc;
             }
             else{
