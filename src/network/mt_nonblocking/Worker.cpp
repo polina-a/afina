@@ -120,9 +120,6 @@ void Worker::OnRun() {
                     _logger->debug("epoll_ctl failed during connection rearm: error {}", epoll_ctl_retval);
                     pconn->OnError();
                     close(pconn->_socket);
-                    std::unique_lock<std::mutex> _lock(m);
-                    connections.erase(pconn);
-                    delete pconn;
                 }
             }
             // Or delete closed one
@@ -131,9 +128,6 @@ void Worker::OnRun() {
                     std::cerr << "Failed to delete connection!" << std::endl;
                 }
                  close(pconn->_socket);
-                 std::unique_lock<std::mutex> _lock(m);
-                 connections.erase(pconn);
-                 delete pconn;
             }
         }
         // TODO: Select timeout...
