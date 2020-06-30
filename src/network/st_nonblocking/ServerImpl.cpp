@@ -92,10 +92,10 @@ void ServerImpl::Stop() {
         throw std::runtime_error("Failed to wakeup workers");
     }
     for(auto conn: connections){
-      close(conn->_socket);
-      delete conn;
+      shutdown(conn->_socket, SHUT_RD);
+
     }
-    close(_server_socket);
+    shutdown(_server_socket, SHUT_RDWR);
 
 }
 

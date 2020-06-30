@@ -94,8 +94,14 @@ void Connection::DoRead() {
                          parser.Reset();
                      }
                  } // while (read_bytes)
-                 assert (read_bytes >= 0);        }
-        }catch (std::runtime_error &ex) {
+               }
+
+               assert (just_read >= 0||errno== EAGAIN || errno== EINTR);
+
+
+
+             }
+         catch (std::runtime_error &ex) {
               outputs.push_back("ERROR\r\n");
               _event.events |= EPOLLOUT;
           }
@@ -132,6 +138,7 @@ void Connection::DoWrite() {
    outputs.erase(outputs.begin(), last);
    if (!outputs.size()) {
        _event.events &= !EPOLLOUT;
+       is_alive = false;
    }
   }
 
