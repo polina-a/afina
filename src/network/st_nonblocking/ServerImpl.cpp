@@ -228,7 +228,6 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
         if (pc->isAlive()) {
             if (epoll_ctl(epoll_descr, EPOLL_CTL_ADD, pc->_socket, &pc->_event)) {
                 pc->OnError();
-                connections.erase(pc);
                 delete pc;
             }
             else{
