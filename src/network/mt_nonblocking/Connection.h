@@ -24,7 +24,7 @@ public:
        arg_remains = 0;
    }
 
-    inline bool isAlive() const { return is_alive.load(); }
+    inline bool isAlive() const { return is_alive.load(std::memory_order_acquire); }
 
     void Start();
 

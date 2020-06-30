@@ -111,6 +111,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 void ServerImpl::Stop() {
     _logger->warn("Stop network service");
     // Said workers to stop
+
     for (auto &w : _workers) {
         w.Stop();
     }
@@ -120,6 +121,7 @@ void ServerImpl::Stop() {
         throw std::runtime_error("Failed to wakeup workers");
     }
 
+    std::unique_lock<std::mutex> lock(m);
     for (auto & conn:connections){
       shutdown(conn->_socket, SHUT_RD);
     }
@@ -128,15 +130,19 @@ void ServerImpl::Stop() {
 
 // See Server.h
 void ServerImpl::Join() {
+    std::unique_lock<std::mutex> lock(m);
     for (auto &t : _acceptors) {
         t.join();
     }
     _acceptors.clear();
+    lock.unlock();
+    lock.lock();
     for (auto &w : _workers) {
         w.Join();
     }
     _workers.clear();
-    std::unique_lock<std::mutex> lock(m);
+    lock.unlock();
+    lock.lock();
     for (auto & conn:connections){
       close(conn->_socket);
       delete conn;
@@ -221,8 +227,6 @@ void ServerImpl::OnRun() {
                         _logger->debug("epoll_ctl failed during connection register in workers'epoll: error {}", epoll_ctl_retval);
                         pc->OnError();
                         close(pc->_socket);
-                        std::unique_lock<std::mutex> lock(m);
-                        connections.erase(pc);
                         delete pc;
                     }
                 } else{
@@ -233,7 +237,14 @@ void ServerImpl::OnRun() {
             }
         }
     }
+
     _logger->warn("Acceptor stopped");
+}
+void ServerImpl::delete_connection(Connection* conn){
+  std::unique_lock<std::mutex> lock(m);
+  connections.erase(conn);
+  close(conn->_socket);
+  delete conn;
 }
 
 } // namespace MTnonblock

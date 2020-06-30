@@ -5,7 +5,7 @@
 #include <memory>
 #include <thread>
 
-#include "Connection.h"
+
 #include "ServerImpl.h"
 namespace spdlog {
 class logger;
@@ -83,6 +83,7 @@ private:
 
     // EPOLL descriptor using for events processing
     int _epoll_fd;
+
 };
 
 } // namespace MTnonblock

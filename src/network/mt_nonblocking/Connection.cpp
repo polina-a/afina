@@ -1,3 +1,5 @@
+
+
 #include "Connection.h"
 
 
@@ -22,19 +24,19 @@ void Connection::Start() {
 // See Connection.h
 void Connection::OnError() {
   std::cout << "OnError" << std::endl;
-  is_alive.store(false);
+  is_alive.store(false, std::memory_order_relaxed);
  }
 
 // See Connection.h
 void Connection::OnClose() {
    std::cout << "OnClose" << std::endl;
-   is_alive.store(false);
+   is_alive.store(false, std::memory_order_relaxed);
  }
 
 // See Connection.h
 void Connection::DoRead() {
   std::cout << "DoRead" << std::endl;
-
+  std::atomic_thread_fence(std::memory_order_acquire);
   try {
             int just_read = -1;
             while ((just_read = read(_socket, client_buffer, sizeof(client_buffer))) > 0) {
@@ -94,15 +96,20 @@ void Connection::DoRead() {
                         parser.Reset();
                     }
                 } // while (read_bytes)
-                assert (read_bytes >= 0);        }
-       }catch (std::runtime_error &ex) {
+              }
+              assert (just_read >= 0||errno==EAGAIN||errno==EINTR);
+              std::atomic_thread_fence(std::memory_order_release);
+           }catch (std::runtime_error &ex) {
              outputs.push_back("ERROR\r\n");
              _event.events |= EPOLLOUT;
+             std::atomic_thread_fence(std::memory_order_release);
+
          }
 
 }
 // See Connection.h
 void Connection::DoWrite() {
+  std::atomic_thread_fence(std::memory_order_acquire);
    std::cout << "DoWrite" << std::endl;
    struct iovec iov[outputs.size()];
 
@@ -130,8 +137,9 @@ void Connection::DoWrite() {
   outputs.erase(outputs.begin(), last);
   if (!outputs.size()) {
       _event.events &= !EPOLLOUT;
+      is_alive.store(false, std::memory_order_relaxed);
   }
-
+  std::atomic_thread_fence(std::memory_order_release);
  }
 
 } // namespace MTnonblock
